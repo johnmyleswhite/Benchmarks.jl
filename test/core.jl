@@ -7,7 +7,7 @@ Benchmarks.@benchmarkable(
     nothing
 )
 
-n_calls = Benchmarks.build_plan(sin_benchmark!)
+n_calls = 1
 n_samples = 100
 p = Benchmarks.Plan(n_calls, n_samples)
 s = Benchmarks.Samples(p)
@@ -16,5 +16,22 @@ sin_benchmark!(p, s)
 
 Benchmarks.summarize(p, s)
 
+p, s, x, y = Benchmarks.execute(sin_benchmark!)
+a, b = linreg(x, y)
+
+Benchmarks.@benchmarkable(
+    digamma_benchmark!,
+    nothing,
+    digamma(2.0),
+    nothing
+)
+
+p, s, x, y = Benchmarks.execute(digamma_benchmark!)
+a, b = linreg(x, y)
+
 # Samples are clearly non-independent, so CI's are probably anti-conservative
-cor(s.elapsed_times[1:(n_samples - 1)], s.elapsed_times[2:n_samples])
+idx = find(x .== maximum(x))
+calls = x[idx]
+times = y[idx]
+n = length(idx)
+cor(y[1:(n - 1)], y[2:n])

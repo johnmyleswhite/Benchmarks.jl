@@ -2,10 +2,8 @@ module Benchmarks
     # We assign every benchmarking session a random UUID
     import UUID
 
-    @doc """
-    Estimate the best-case resolution of benchmark timings based on the system
-    clock in nanoseconds.
-    """ ->
+    # Estimate the best-case resolution of benchmark timings based on the system
+    # clock in nanoseconds.
     function estimate_clock_resolution(n_samples::Integer = 10_000)
         t = typemax(Float64)
 
@@ -53,12 +51,12 @@ module Benchmarks
 
     # We resize an existing Samples object by resizing every internal
     # array.
-    function Base.resize!(s::Samples, n::Integer)
-        resize!(s.elapsed_times, n)
-        resize!(s.bytes_allocated, n)
-        resize!(s.gc_times, n)
-        resize!(s.num_allocations, n)
-        n
+    function Base.resize!(s::Samples, p::Plan)
+        resize!(s.elapsed_times, p.n_samples)
+        resize!(s.bytes_allocated, p.n_samples)
+        resize!(s.gc_times, p.n_samples)
+        resize!(s.num_allocations, p.n_samples)
+        return
     end
 
     # We store information about the environment in which our benchmarks
@@ -86,11 +84,8 @@ module Benchmarks
 
         function Environment()
             uuid = UUID.v4()
-
             timestamp = Libc.strftime("%Y-%m-%d %H:%M:%S", round(Int, time()))
-
             julia_revision = Base.GIT_VERSION_INFO.commit
-
             repo_revision = if isdir(".git")
                 sha1 = ""
                 try
@@ -104,17 +99,11 @@ module Benchmarks
             else
                 Nullable{UTF8String}()
             end
-
             os = string(OS_NAME)
-
             cpu_cores = CPU_CORES
-
             arch = string(Base.ARCH)
-
             machine = Base.MACHINE
-
             use_blas64 = Base.USE_BLAS64
-
             word_size = Base.WORD_SIZE
 
             new(
@@ -134,12 +123,12 @@ module Benchmarks
 
     # A benchmark consists of:
     # * A name
-    # * A function that implements the Benchmarkable protocol
+    # * A function that implements the "benchmarkable" protocol
     # * A plan that determines the execution of the Benchmarkable function
     # * A samples array to store the results of benchmarking the function
     immutable Benchmark
         name::UTF8String
-        f::Function
+        f!::Function
         plan::Plan
         samples::Samples
     end
@@ -153,26 +142,21 @@ module Benchmarks
     end
 
     # Translate a set of expressions into a function that implements the
-    # Benchmarkable protocol.
-    macro benchmarkable(
-        name,
-        setup,
-        body,
-        teardown,
-    )
+    # "benchmarkable" protocol. We assume that precompilation, when
+    # appropriate, will be handled elsewhere.
+    macro benchmarkable(name, setup, body, teardown)
         quote
             function $(esc(name))(p::Plan, s::Samples)
                 $(esc(setup))
-                out = $(esc(body))
                 for sample in 1:p.n_samples
-                    local stats = Base.gc_num()
-                    local elapsedtime = time_ns()
+                    stats = Base.gc_num()
+                    elapsedtime = time_ns()
                     for c in 1:p.n_calls
                         out = $(esc(body))
                     end
-                    local diff = Base.GC_Diff(Base.gc_num(), stats)
-                    local bytes = diff.total_allocd + diff.allocd
-                    local allocs = diff.malloc + diff.realloc + diff.poolalloc
+                    diff = Base.GC_Diff(Base.gc_num(), stats)
+                    bytes = diff.total_allocd + diff.allocd
+                    allocs = diff.malloc + diff.realloc + diff.poolalloc
                     s.elapsed_times[sample] = time_ns() - elapsedtime
                     s.bytes_allocated[sample] = bytes
                     s.gc_times[sample] = diff.total_time
@@ -184,74 +168,105 @@ module Benchmarks
         end
     end
 
-    # Construct a benchmark execution plan by determining a number of calls
-    # the expression that should be executed per sample in order to ensure
-    # that the mean time over all calls is a good estimator of the per-call
-    # execution time -- even when this time is below the clock resolution of
-    # the system clock.
-    function build_plan(f!::Function)
-        # We determine the best case timing estimate we could ever hope for.
-        resolution = estimate_clock_resolution()
-
-        # Start by measuring time using a 1, 1 sampling plan
+    # Execute a benchmarkable function using an increasing number of calls per
+    # sample. This allows to ensure that microbenchmarks, which may run faster
+    # than the system clock can track, are executed enough times per sample to
+    # yield valid estimates.
+    # TODO: Specify a time budget?
+    # TODO: Execute function exactly once if the initial execution (which may
+    #       involve compilation) takes longer than a fixed time limit.
+    function execute(
+            f!::Function,
+            limit::Integer = 60,
+            τ::Float64 = 0.95,
+            α::Float64 = 1.1,
+            x_samples::Integer = 250,
+            verbose::Bool = true,
+        )
+        # Start by measuring time using a (1, 1) sampling plan
         p = Plan(1, 1)
         s = Samples(p)
 
-        # Run once to force compilation of the benchmarkable function,
-        # then run again to gather a real measurement
-        f!(p, s)
+        # Run the benchmarkable function at least once
         f!(p, s)
 
-        # Estimate the elapsed time during a single call
-        naive_time = s.elapsed_times[1]
+        # Estimate the elapsed time for the very first call, which may include
+        # JIT compilation time
+        initial_time = s.elapsed_times[1]
 
-        # If the elapsed time is more than 10,000 times longer than the clock
-        # resolution, we can safely use a 1, 1 plan for benchmarking
-        if naive_time > 10_000 * resolution
-            return Plan(1, 1)
+        # If the initial time estimate is longer than our limit, we won't ever
+        # run the function again.
+        if initial_time > 10^9 * limit
+            return p, s, Float64[], Float64[]
         end
 
-        # Otherwise, begin searching for a better execution plan
+        # If the function was fast enough that we're willing to run it again,
+        # we do run it again to generate a timing estimate that won't include
+        # any JIT compilation time.
+        f!(p, s)
 
-        # We'll regress the total sample time against the number of calls
-        # per sample. When the linear model is almost a perfect fit, we're
+        # Now estimate the elapsed time from a single JIT-less call
+        naive_time = s.elapsed_times[1]
+
+        # We determine the best case timing estimate we could ever hope for
+        # compare our naive time against.
+        resolution = estimate_clock_resolution()
+
+        # If the elapsed time is more than 10,000 times longer than the clock
+        # resolution, we can safely use a (1, 1) plan for benchmarking.
+        if naive_time > 10_000 * resolution
+            # TODO: Generate many samples here.
+            return p, s, Float64[], Float64[]
+        end
+
+        # If the function is fast enough that the system clock resolution is
+        # a problem for us, we'll go a geometric search through execution plans
+        # to ensure that our estimates aren't severely biased by the clock's
+        # resolution. To do that, we'll use an OLS regression in which we
+        # regress the total sample time against the number of calls per sample.
+        # When the linear model is almost a perfect fit to the data, we're
         # confident that we're getting good timings.
         x = Float64[]
         y = Float64[]
 
-        # We'll stop when the correlation between calls and times is above
-        # 0.9999
-        τ = 0.99
-
-        # When the linear model is still a bad fit, we'll double the number
-        # of calls per sample.
-        α = 2.0
-
         # Start with two calls per sample
-        n_calls = 2
+        n_calls = 2.0
+
+        # Loop through a geometrically increasing set of values for n_calls
+        # before we decide that we've done enough work.
         finished = false
+        a, b = NaN, NaN
         while !finished
-            # Try out the next execution plan
-            p = Benchmarks.Plan(n_calls, 100)
+            # Use enough samples
+            p = Benchmarks.Plan(ceil(Integer, n_calls), x_samples)
             s = Benchmarks.Samples(p)
             f!(p, s)
 
-            # Add the new timing observations
-            append!(x, s.elapsed_times)
+            # Add the new timing observations to our accumulated data set.
             for i in 1:length(s.elapsed_times)
-                push!(y, n_calls)
+                push!(x, n_calls)
             end
+            append!(y, s.elapsed_times)
 
-            # If the correlation between the number of calls
-            if cor(x, y) > τ
+            # Perform an OLS regression to estimate the per-call time.
+            a, b = linreg(x, y)
+            r_squared = 1 - var(a + b * x - y) / var(y)
+            if verbose
+                @printf("%f,%f,%f,%f\n", n_calls, a, b, r_squared)
+            end
+            if r_squared > τ
                 finished = true
             end
 
-            # Increase the number of calls we need
-            n_calls = ceil(Integer, α * n_calls)
+            # Increase the number of calls per sample we use in the next step.
+            n_calls *= α
         end
 
-        return n_calls
+        if verbose
+            writecsv("sin_benchmark.csv", hcat(x, y))
+        end
+
+        return p, s, x, y
     end
 
     function summarize(p, r)
