@@ -45,3 +45,7 @@ Benchmarks.@benchmarkable(
 r = Benchmarks.execute(sleep_benchmark!)
 
 e = Benchmarks.Environment()
+
+import Benchmarks
+Benchmarks.@benchmark(sin(2.0))
+Benchmarks.@benchmark(svd(rand(1000, 1000)))
