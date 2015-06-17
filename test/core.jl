@@ -7,17 +7,7 @@ Benchmarks.@benchmarkable(
     nothing
 )
 
-n_calls = 1
-n_samples = 100
-p = Benchmarks.Plan(n_calls, n_samples)
-s = Benchmarks.Samples(p)
-
-sin_benchmark!(p, s)
-
-Benchmarks.summarize(p, s)
-
-p, s, x, y = Benchmarks.execute(sin_benchmark!)
-a, b = linreg(x, y)
+r = Benchmarks.execute(sin_benchmark!, 0, 5)
 
 Benchmarks.@benchmarkable(
     digamma_benchmark!,
@@ -26,12 +16,32 @@ Benchmarks.@benchmarkable(
     nothing
 )
 
-p, s, x, y = Benchmarks.execute(digamma_benchmark!)
-a, b = linreg(x, y)
+r = Benchmarks.execute(digamma_benchmark!)
 
 # Samples are clearly non-independent, so CI's are probably anti-conservative
+x, y = r.samples.n_evals, r.samples.elapsed_times
 idx = find(x .== maximum(x))
 calls = x[idx]
 times = y[idx]
 n = length(idx)
 cor(y[1:(n - 1)], y[2:n])
+
+Benchmarks.@benchmarkable(
+    svd2_benchmark!,
+    nothing,
+    svd(randn(100, 100)),
+    nothing
+)
+
+r = Benchmarks.execute(svd2_benchmark!)
+
+Benchmarks.@benchmarkable(
+    sleep_benchmark!,
+    nothing,
+    sleep(10),
+    nothing
+)
+
+r = Benchmarks.execute(sleep_benchmark!)
+
+e = Benchmarks.Environment()
