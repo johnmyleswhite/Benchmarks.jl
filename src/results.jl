@@ -53,7 +53,6 @@ function Base.show(io::IO, r::Results)
         if !r.multiple_samples
             m = s.elapsed_times[1] / s.n_evals[1]
             min = m
-            m = m / 10^6
             n = 1
             lower, upper = NaN, NaN
             r² = NaN
@@ -63,8 +62,6 @@ function Base.show(io::IO, r::Results)
             n = length(s.elapsed_times)
             sem = std(s.elapsed_times) / sqrt(n)
             lower, upper = m - 6.0 * sem, m + 6.0 * sem
-            lower = lower / 10^6
-            upper = upper / 10^6
             r² = NaN
         end
     else
@@ -76,9 +73,17 @@ function Base.show(io::IO, r::Results)
         lower, upper = b - 6.0 * sem, b + 6.0 * sem
     end
 
-    @printf(io, "%s %.2f ms\n", lpad("Average elapsed time:", 24), m)
-    @printf(io, "%s [%.2f ms, %.2f ms]\n", lpad("95% CI for average:", 24), lower, upper)
-    @printf(io, "%s %.2f ms\n", lpad("Minimum elapsed time:", 24), min)
+    gc_pct = mean(100 * (s.gc_times ./ s.elapsed_times))
+    i = indmin(s.bytes_allocated ./ s.n_evals)
+    bytes = fld(s.bytes_allocated[i], convert(Int, s.n_evals[i]))
+    allocs = fld(s.num_allocations[i], convert(Int, s.n_evals[i]))
+
+    @printf(io, "%s %.2f ns\n", lpad("Average elapsed time:", 24), m)
+    @printf(io, "%s [%.2f ns, %.2f ns]\n", lpad("95% CI for average:", 24), lower, upper)
+    @printf(io, "%s %.2f ns\n", lpad("Minimum elapsed time:", 24), min)
+    @printf(io, "%s %.2f%%\n", lpad("GC time:", 24), gc_pct)
+    @printf(io, "%s %d bytes\n", lpad("Memory allocated:", 24), bytes)
+    @printf(io, "%s %d allocations\n", lpad("Number of allocations:", 24), allocs)
     @printf(io, "%s %d\n", lpad("Number of samples:", 24), n)
     @printf(io, "%s %.3f\n", lpad("R² of OLS model:", 24), r²)
     @printf(io, "%s %.2fs\n", lpad("Time used for benchmark:", 24), r.time_used)

@@ -27,8 +27,8 @@ r = Benchmarks.execute(digamma_benchmark!)
 # Samples are clearly non-independent, so CI's are probably anti-conservative
 x, y = r.samples.n_evals, r.samples.elapsed_times
 idx = find(x .== maximum(x))
-calls = x[idx]
-times = y[idx]
+x = x[idx]
+y = y[idx]
 n = length(idx)
 cor(y[1:(n - 1)], y[2:n])
 
@@ -44,7 +44,7 @@ r = Benchmarks.execute(svd2_benchmark!)
 Benchmarks.@benchmarkable(
     sleep_benchmark!,
     nothing,
-    sleep(10),
+    sleep(7.5),
     nothing
 )
 
