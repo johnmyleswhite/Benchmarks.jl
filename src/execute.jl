@@ -52,7 +52,7 @@ function execute(
     # We stop benchmarking f! if we've already exhausted our time budget.
     time_used = time() - start_time
     if time_used > budget
-        return Results(:uncompiled_sampling, :single_value, s)
+        return Results(false, false, false, s, time_used)
     end
 
     # We determine the maximum number of samples we could record given
@@ -64,7 +64,7 @@ function execute(
     # We stop benchmarking if running f! one more time would put us over
     # our time budget.
     if max_samples < 1
-        return Results(:uncompiled_sampling, :single_value, s)
+        return Results(false, false, false, s, time_used)
     end
 
     # Having reached this point, we can afford to record at least one more
@@ -92,7 +92,7 @@ function execute(
     # only requested a single sample.
     time_used = time() - start_time
     if time_used > budget || samples == 1
-        return Results(:compiled_sampling, :single_value, s)
+        return Results(true, false, false, s, time_used)
     end
 
     # Now we determine if the function is so fast that we need to execute the
@@ -105,7 +105,7 @@ function execute(
         max_samples = floor(Integer, remaining_time_ns / debiased_time_ns)
         n_samples = min(max_samples, samples - 1)
         f!(s, n_samples, 1)
-        return Results(:compiled_sampling, :multiple_values, s)
+        return Results(true, true, false, s, time() - start_time)
     end
 
     # If we've reached this far, we are benchmarking a function that is so fast
@@ -122,7 +122,7 @@ function execute(
     # We start by executing two evaluations per sample.
     n_evals = 2.0
 
-    # Now we perform our geometric search.
+    # Now we perform a geometric search.
     finished = false
     a, b = NaN, NaN
     while !finished
@@ -133,8 +133,8 @@ function execute(
         a, b, r² = ols(s.n_evals, s.elapsed_times)
 
         # Stop our search when either:
-        #    (1) The OLS fit is good enough; or
-        #    (2) We've exhausted our time budget.
+        #  (1) The OLS fit is good enough; or
+        #  (2) We've exhausted our time budget.
         time_used = time() - start_time
         if r² > τ || time_used > budget
             finished = true
@@ -156,5 +156,5 @@ function execute(
         n_evals *= α
     end
 
-    return Results(:compiled_search, :ols_model, s)
+    return Results(true, true, true, s, time() - start_time)
 end

@@ -7,7 +7,13 @@ Benchmarks.@benchmarkable(
     nothing
 )
 
-r = Benchmarks.execute(sin_benchmark!, 0, 5)
+r = Benchmarks.execute(sin_benchmark!)
+
+e = Benchmarks.Environment()
+
+writecsv("environment.csv", e)
+
+writecsv("samples.csv", r.samples)
 
 Benchmarks.@benchmarkable(
     digamma_benchmark!,
@@ -44,8 +50,9 @@ Benchmarks.@benchmarkable(
 
 r = Benchmarks.execute(sleep_benchmark!)
 
-e = Benchmarks.Environment()
-
-import Benchmarks
 Benchmarks.@benchmark(sin(2.0))
 Benchmarks.@benchmark(svd(rand(1000, 1000)))
+
+using Benchmarks
+
+@benchmark svd(rand(1, 1))

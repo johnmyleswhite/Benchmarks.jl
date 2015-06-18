@@ -1,5 +1,5 @@
-# Estimate the best-case resolution of benchmark timings based on the
-# system clock in nanoseconds.
+# Estimate the best-case resolution (in nanoseconds) of benchmark timings based
+# on the system clock.
 #
 # Arguments:
 #
@@ -8,17 +8,22 @@
 #
 # Returns:
 #
-#     t::Float64: The estimated clock resolutio in nanoseconds.
+#     res::Float64: The estimated clock resolutio in nanoseconds.
+#
+# TODO:
+#
+#     This function is known to not work on Windows because of the behavior
+#     of `time_ns` on that platform.
 
 function estimate_clock_resolution(n_samples::Integer = 10_000)
-    t = typemax(Float64)
+    res = typemax(Float64)
 
     for s in 1:n_samples
         t1 = Base.time_ns()
         t2 = Base.time_ns()
-        elapsed = convert(Float64, t2 - t1)
-        t = min(t, elapsed)
+        dt = convert(Float64, t2 - t1)
+        res = min(res, dt)
     end
 
-    t
+    res
 end

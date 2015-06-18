@@ -1,5 +1,6 @@
 module Benchmarks
     import UUID
+    export @benchmark
 
     include("clock_resolution.jl")
     include("environment.jl")
@@ -8,19 +9,6 @@ module Benchmarks
     include("benchmarkable.jl")
     include("ols.jl")
     include("execute.jl")
-
-    macro benchmark(core)
-        name = esc(gensym())
-        quote
-            begin
-                Benchmarks.@benchmarkable(
-                    $name,
-                    nothing,
-                    $(esc(core)),
-                    nothing
-                )
-                Benchmarks.execute($name)
-            end
-        end
-    end
+    include("benchmark.jl")
+    include("wrapper_types.jl")
 end

@@ -1,25 +1,30 @@
 # An Environment object stores information about the environment in which
-# a suite of benchmarks were executed. We log information about:
+# a suite of benchmarks were executed.
 #
-#     A random UUID that uniquely identifies each run.
+# Fields:
 #
-#     The time when we began executing benchmarks.
+#     uuid::UTF8String: A random UUID that uniquely identifies each run.
 #
-#     The SHA1 for the Julia Git revision we're working from.
+#     timestamp::UTF8String: The time when we began executing benchmarks.
 #
-#     The SHA1 for the current repo's Git revision (if any).
+#     julia_sha1::UTF8String: The SHA1 for the Julia Git revision we're working
+#         from.
 #
-#     The OS we're running on.
+#     package_sha1::Nullable{UTF8String}: The SHA1 for the current repo's Git
+#         revision (if any). This field is null when the code was not executed
+#         inside of a Git repo.
 #
-#     The number of CPU cores available.
+#     os::UTF8String: The OS we're running on.
 #
-#     The architecture we're running on.
+#     cpu_cores::Int: The number of CPU cores available.
 #
-#     The machine type we're running on.
+#     arch::UTF8String: The architecture we're running on.
 #
-#     Was BLAS configured to use 64-bits?
+#     machine::UTF8String: The machine type we're running on.
 #
-#     The word size of the host machine.
+#     use_blas64::Bool: Was BLAS configured to use 64-bits?
+#
+#     word_size::Int: The word size of the host machine.
 
 immutable Environment
     uuid::UTF8String
@@ -72,8 +77,17 @@ immutable Environment
     end
 end
 
+# Pretty-print information about the environment in which benchmarks are being
+# executed
+#
+# Arguments:
+#
+#     io::IO: An IO object to be written to.
+#
+#     e::Environment: The environment that we want to print to `io`.
+
 function Base.show(io::IO, e::Environment)
-    @printf(io, "=== Benchmarking environment ===\n")
+    @printf(io, "================== Benchmark Environment ==================\n")
     @printf(io, " %s %s\n", lpad("UUID:", 17), e.uuid)
     @printf(io, " %s %s\n", lpad("Time:", 17), e.timestamp)
     @printf(io, " %s %s\n", lpad("Julia SHA1:", 17), e.julia_sha1)
@@ -89,4 +103,62 @@ function Base.show(io::IO, e::Environment)
     @printf(io, " %s %s\n", lpad("OS:", 17), e.os)
     @printf(io, " %s %s\n", lpad("Word size:", 17), e.word_size)
     @printf(io, " %s %s", lpad("64-bit BLAS:", 17), e.use_blas64)
+end
+
+# Log information about the environment in which benchmarks are being executed
+# to a TSV file.
+#
+# Arguments:
+#
+#     filename::String: The name of a file to which we'll write information
+#         the environment object, `e`.
+#
+#     e::Environment: The environment that we want to log to disk.
+#
+#     append::Bool: Should we write a new file or append to an existing one?
+#         Defaults to false.
+
+function Base.writecsv(filename::String, e::Environment, append::Bool = false)
+    if append
+        io = open(filename, "a")
+    else
+        io = open(filename, "w")
+    end
+    println(
+        io,
+        join(
+            [
+                "uuid",
+                "timestamp",
+                "julia_sha1",
+                "package_sha1",
+                "os",
+                "cpu_cores",
+                "arch",
+                "machine",
+                "use_blas64",
+                "word_size",
+            ],
+            "\t"
+        )
+    )
+    println(
+        io,
+        join(
+            [
+                e.uuid,
+                e.timestamp,
+                e.julia_sha1,
+                get(e.package_sha1, "NULL"),
+                e.os,
+                string(e.cpu_cores),
+                e.arch,
+                e.machine,
+                string(e.use_blas64),
+                string(e.word_size),
+            ],
+            "\t"
+        )
+    )
+    close(io)
 end

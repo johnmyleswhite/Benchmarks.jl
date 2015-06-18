@@ -1,6 +1,7 @@
-# Combine a set of expressions into a function that implements the
-# "benchmarkable" protocol. We assume that precompilation, when
-# required, will be handled elsewhere.
+# The @benchmarkable macro combines a tuple of expressions into a function
+# that implements the "benchmarkable" protocol. We assume that precompilation,
+# when required, will be handled elsewhere; as such, we make no extra calls to
+# the core expression that we want to benchmark.
 #
 # Arguments:
 #
