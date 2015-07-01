@@ -37,12 +37,15 @@ macro benchmarkable(name, setup, core, teardown)
             for _ in 1:n_samples
                 # Store pre-evaluation state information
                 stats = Base.gc_num()
-                elapsed_time = time_ns()
+                time_before = time_ns()
 
                 # Evaluate the core expression n_evals times.
                 for _ in 1:n_evals
                     out = $(esc(core))
                 end
+
+                # get time before comparing GC info
+                elapsed_time = time_ns() - time_before
 
                 # Compare post-evaluation state with pre-evaluation state.
                 diff = Base.GC_Diff(Base.gc_num(), stats)
@@ -51,7 +54,7 @@ macro benchmarkable(name, setup, core, teardown)
 
                 # Append data for this sample to the Samples objects.
                 push!(s.n_evals, n_evals)
-                push!(s.elapsed_times, time_ns() - elapsed_time)
+                push!(s.elapsed_times, elapsed_time)
                 push!(s.bytes_allocated, bytes)
                 push!(s.gc_times, diff.total_time)
                 push!(s.num_allocations, allocs)
