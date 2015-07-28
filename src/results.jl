@@ -32,6 +32,24 @@ immutable Results
     time_used::Float64
 end
 
+function prettyprint_nanoseconds(value::Real)
+    if value < 10^3
+        if value % 1 == 0
+            string(value, " ns")
+        else
+            @sprintf("%.3f ns", value)
+        end
+    elseif value < 10^6
+        @sprintf("%.3f μs", value/10^3)
+    elseif value < 10^9
+        @sprintf("%.3f ms", value/10^6)
+    elseif value < 10^12
+        @sprintf("%.3f s", value/10^9)
+    else
+        @sprintf("%d s", value/10^9)
+    end
+end
+
 # Pretty-print information about the results of benchmarking an expression.
 #
 # Arguments:
@@ -78,16 +96,16 @@ function Base.show(io::IO, r::Results)
     bytes = fld(s.bytes_allocated[i], convert(Int, s.n_evals[i]))
     allocs = fld(s.num_allocations[i], convert(Int, s.n_evals[i]))
 
-    @printf(io, "%s %.2f ns\n", lpad("Average elapsed time:", 24), m)
-    @printf(io, "%s [%.2f ns, %.2f ns]\n", lpad("95% CI for average:", 24), lower, upper)
-    @printf(io, "%s %.2f ns\n", lpad("Minimum elapsed time:", 24), min)
-    @printf(io, "%s %.2f%%\n", lpad("GC time:", 24), gc_pct)
-    @printf(io, "%s %d bytes\n", lpad("Memory allocated:", 24), bytes)
-    @printf(io, "%s %d allocations\n", lpad("Number of allocations:", 24), allocs)
-    @printf(io, "%s %d\n", lpad("Number of samples:", 24), n)
-    @printf(io, "%s %.3f\n", lpad("R² of OLS model:", 24), r²)
-    @printf(io, "%s %.2fs\n", lpad("Time used for benchmark:", 24), r.time_used)
-    @printf(io, "%s %s\n", lpad("Precompiled:", 24), string(r.precompiled))
-    @printf(io, "%s %s\n", lpad("Multiple samples:", 24), string(r.multiple_samples))
-    @printf(io, "%s %s", lpad("Search performed:", 24), string(r.search_performed))
+    @printf(io, "%24s %s\n", "Average elapsed time:", prettyprint_nanoseconds(m))
+    @printf(io, "%24s [%s, %s]\n", "95% CI for average:", prettyprint_nanoseconds(lower), prettyprint_nanoseconds(upper))
+    @printf(io, "%24s %s\n", "Minimum elapsed time:", prettyprint_nanoseconds(min))
+    @printf(io, "%24s %.2f%%\n", "GC time:", gc_pct)
+    @printf(io, "%24s %d bytes\n", "Memory allocated:", bytes)
+    @printf(io, "%24s %d allocations\n", "Number of allocations:", allocs)
+    @printf(io, "%24s %d\n", "Number of samples:", n)
+    @printf(io, "%24s %.3f\n", "R² of OLS model:", r²)
+    @printf(io, "%24s %.2f s\n", "Time used for benchmark:", r.time_used)
+    @printf(io, "%24s %s\n", "Precompiled:", r.precompiled)
+    @printf(io, "%24s %s\n", "Multiple samples:", r.multiple_samples)
+    @printf(io, "%24s %s", "Search performed:", r.search_performed)
 end
