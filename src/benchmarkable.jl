@@ -49,8 +49,8 @@ macro benchmarkable(name, setup, core, teardown)
 
                 # Compare post-evaluation state with pre-evaluation state.
                 diff = Base.GC_Diff(Base.gc_num(), stats)
-                bytes = diff.total_allocd + diff.allocd
-                allocs = diff.malloc + diff.realloc + diff.poolalloc
+                bytes = diff.allocd
+                allocs = diff.malloc + diff.realloc + diff.poolalloc + diff.bigalloc
 
                 # Append data for this sample to the Samples objects.
                 push!(s.n_evals, n_evals)
