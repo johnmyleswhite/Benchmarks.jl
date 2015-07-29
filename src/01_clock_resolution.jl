@@ -8,22 +8,22 @@
 #
 # Returns:
 #
-#     res::Float64: The estimated clock resolutio in nanoseconds.
+#     min_Δt::Uint: The estimated clock resolution in nanoseconds.
 #
 # TODO:
 #
 #     This function is known to not work on Windows because of the behavior
-#     of `time_ns` on that platform.
+#     of `time_ns()` on that platform.
 
 function estimate_clock_resolution(n_samples::Integer = 10_000)
-    res = typemax(Float64)
+    min_Δt = typemax(Uint)
 
-    for s in 1:n_samples
+    for _ in 1:n_samples
         t1 = Base.time_ns()
         t2 = Base.time_ns()
-        dt = convert(Float64, t2 - t1)
-        res = min(res, dt)
+        Δt = t2 - t1
+        min_Δt = min(min_Δt, Δt)
     end
 
-    res
+    min_Δt
 end
