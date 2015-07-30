@@ -11,9 +11,9 @@ r = Benchmarks.execute(sin_benchmark!)
 
 e = Benchmarks.Environment()
 
-writecsv("environment.csv", e)
+writedlm("environment.csv", e)
 
-writecsv("samples.csv", r.samples)
+writedlm("samples.csv", r.samples)
 
 Benchmarks.@benchmarkable(
     digamma_benchmark!,

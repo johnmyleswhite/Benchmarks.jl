@@ -106,7 +106,7 @@ function Base.show(io::IO, e::Environment)
 end
 
 # Log information about the environment in which benchmarks are being executed
-# to a TSV file.
+# to a delimeted text file.
 #
 # Arguments:
 #
@@ -115,10 +115,13 @@ end
 #
 #     e::Environment: The environment that we want to log to disk.
 #
+#     delim::String: The delimeter to use to separate elements. Default is `\t
+#
 #     append::Bool: Should we write a new file or append to an existing one?
 #         Defaults to false.
 
-function Base.writecsv(filename::String, e::Environment, append::Bool = false)
+function Base.writedlm(filename::String, e::Environment, delim="\t",
+                       append::Bool = false)
     if append
         io = open(filename, "a")
     else
@@ -139,7 +142,7 @@ function Base.writecsv(filename::String, e::Environment, append::Bool = false)
                 "use_blas64",
                 "word_size",
             ],
-            "\t"
+            delim
         )
     )
     println(
@@ -157,8 +160,27 @@ function Base.writecsv(filename::String, e::Environment, append::Bool = false)
                 string(e.use_blas64),
                 string(e.word_size),
             ],
-            "\t"
+            delim
         )
     )
     close(io)
 end
+
+# Log information about the environment in which benchmarks are being executed
+# to a csv file.
+#
+# Arguments:
+#
+#     filename::String: The name of a file to which we'll write information
+#         the environment object, `e`.
+#
+#     e::Environment: The environment that we want to log to disk.
+#
+#     append::Bool: Should we write a new file or append to an existing one?
+#         Defaults to false.
+#
+# Notes:
+#
+#     This is equivalent to calling `writedlm` with the delim set to `","`
+Base.writecsv(filename::String, e::Environment, append::Bool = false) =
+    writedlm(filename, e, ",", append)

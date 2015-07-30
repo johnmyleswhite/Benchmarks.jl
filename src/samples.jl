@@ -66,65 +66,8 @@ function Base.show(io::IO, s::Samples)
     @printf(io, " %s %s", lpad("Number of metrics:", 17), 5)
 end
 
-# Log information about the environment in which benchmarks are being executed
-# to a TSV file.
-#
-# Arguments:
-#
-#     filename::String: The name of a file to which we'll write information
-#         the environment object, `e`.
-#
-#     e::Environment: The environment that we want to log to disk.
-#
-#     append::Bool: Should we write a new file or append to an existing one?
-#         Defaults to false.
 
-function Base.writecsv(filename::String, e::Environment, append::Bool = false)
-    if append
-        io = open(filename, "a")
-    else
-        io = open(filename, "w")
-    end
-    println(
-        io,
-        join(
-            [
-                "uuid",
-                "timestamp",
-                "julia_sha1",
-                "package_sha1",
-                "os",
-                "cpu_cores",
-                "arch",
-                "machine",
-                "use_blas64",
-                "word_size",
-            ],
-            "\t"
-        )
-    )
-    println(
-        io,
-        join(
-            [
-                e.uuid,
-                e.timestamp,
-                e.julia_sha1,
-                get(e.package_sha1, "NULL"),
-                e.os,
-                string(e.cpu_cores),
-                e.arch,
-                e.machine,
-                string(e.use_blas64),
-                string(e.word_size),
-            ],
-            "\t"
-        )
-    )
-    close(io)
-end
-
-# Log information about a set of samples to a TSV file.
+# Log information about a set of samples to a delimited file.
 #
 # Arguments:
 #
@@ -133,10 +76,13 @@ end
 #
 #     s::Samples: The set of samples that we want to log to disk.
 #
+#     delim::String: The delimeter to use to separate elements. Default is `\t`
+#
 #     append::Bool: Should we write a new file or append to an existing one?
 #         Defaults to false.
 
-function Base.writecsv(filename::String, s::Samples, append::Bool = false)
+function Base.writedlm(filename::String, s::Samples, delim::String = "\t",
+                       append::Bool = false)
     if append
         io = open(filename, "a")
     else
@@ -152,7 +98,7 @@ function Base.writecsv(filename::String, s::Samples, append::Bool = false)
                 "gc_times",
                 "num_allocations",
             ],
-            "\t"
+            delim
         )
     )
     for i in 1:length(s.n_evals)
@@ -166,9 +112,27 @@ function Base.writecsv(filename::String, s::Samples, append::Bool = false)
                     string(s.gc_times[i])
                     string(s.num_allocations[i])
                 ],
-                "\t"
+                delim
             )
         )
     end
     close(io)
 end
+
+# Log information about a set of samples to a csv file.
+#
+# Arguments:
+#
+#     filename::String: The name of a file to which we'll write information
+#         the environment object, `e`.
+#
+#     e::Environment: The environment that we want to log to disk.
+#
+#     append::Bool: Should we write a new file or append to an existing one?
+#         Defaults to false.
+#
+# Notes:
+#
+#     This is equivalent to calling `writedlm` with the delim set to `","`
+Base.writecsv(filename::String, s::Samples, append::Bool = false) =
+    writedlm(filename, s, ",", append)
