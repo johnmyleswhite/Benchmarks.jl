@@ -79,7 +79,7 @@ end
 #     append::Bool: Should we write a new file or append to an existing one?
 #         Defaults to false.
 
-function Base.writecsv(filename::String, e::Environment, append::Bool = false)
+function Base.writecsv(filename::String, e::Environment, append::Bool = false, delim::Char = '\t')
     if append
         io = open(filename, "a")
     else
@@ -100,7 +100,7 @@ function Base.writecsv(filename::String, e::Environment, append::Bool = false)
                 "use_blas64",
                 "word_size",
             ],
-            "\t"
+            delim
         )
     )
     println(
@@ -118,7 +118,7 @@ function Base.writecsv(filename::String, e::Environment, append::Bool = false)
                 string(e.use_blas64),
                 string(e.word_size),
             ],
-            "\t"
+            delim
         )
     )
     close(io)
@@ -136,7 +136,7 @@ end
 #     append::Bool: Should we write a new file or append to an existing one?
 #         Defaults to false.
 
-function Base.writecsv(filename::String, s::Samples, append::Bool = false)
+function Base.writecsv(filename::String, s::Samples, append::Bool = false, delim::Char = '\t')
     if append
         io = open(filename, "a")
     else
@@ -152,7 +152,7 @@ function Base.writecsv(filename::String, s::Samples, append::Bool = false)
                 "gc_times",
                 "num_allocations",
             ],
-            "\t"
+            delim
         )
     )
     for i in 1:length(s.n_evals)
@@ -166,7 +166,46 @@ function Base.writecsv(filename::String, s::Samples, append::Bool = false)
                     string(s.gc_times[i])
                     string(s.num_allocations[i])
                 ],
-                "\t"
+                delim
+            )
+        )
+    end
+    close(io)
+end
+
+function Base.writecsv(filename::String, s::Samples, e::Environment, append::Bool = false, delim::Char = '\t')
+    if append
+        io = open(filename, "a")
+    else
+        io = open(filename, "w")
+    end
+    println(
+        io,
+        join(
+            [
+                "env_uuid"
+                "n_evals",
+                "elapsed_times",
+                "bytes_allocated",
+                "gc_times",
+                "num_allocations",
+            ],
+            delim
+        )
+    )
+    for i in 1:length(s.n_evals)
+        println(
+            io,
+            join(
+                [
+                    string(e.uuid)
+                    string(s.n_evals[i])
+                    string(s.elapsed_times[i])
+                    string(s.bytes_allocated[i])
+                    string(s.gc_times[i])
+                    string(s.num_allocations[i])
+                ],
+                delim
             )
         )
     end
