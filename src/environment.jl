@@ -39,7 +39,7 @@ immutable Environment
     word_size::Int
 
     function Environment()
-        uuid = string(UUID.v4())
+        uuid = string(Base.Random.uuid4())
         timestamp = Libc.strftime("%Y-%m-%d %H:%M:%S", round(Int, time()))
         julia_sha1 = Base.GIT_VERSION_INFO.commit
         package_sha1 = if isdir(".git")
