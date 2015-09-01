@@ -115,12 +115,15 @@ function execute(
     # evaluate the core expression per sample, we perform a geometric search
     # that starts at 2 evaluations per sample and increases by a factor of 1.1
     # evaluations on each iteration. Having generated data in this form, we
-    # use an OLD regression to estimate the per-evaluation timing of our core
+    # use an OLS regression to estimate the per-evaluation timing of our core
     # expression. We stop our geometric search when the OLS linear model is
     # almost perfect fit to our empirical data.
 
     # We start by executing two evaluations per sample.
     n_evals = 2.0
+
+    # print header about the search progress
+    verbose && @printf "%s\t%20s\t%8s\t%s\n" "time_used" "n_evals" "b" "r²"
 
     # Now we perform a geometric search.
     finished = false

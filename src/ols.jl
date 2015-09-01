@@ -25,7 +25,7 @@ end
 function sem_ols(x::Vector{Float64}, y::Vector{Float64})
     a, b = linreg(x, y)
     n = length(x)
-    residuals = y - a + b * x
+    residuals = y - (a + b * x)
     sem_b = sqrt(((1 / (n - 2)) * sum(residuals.^2)) / sum((x - mean(x)).^2))
     return sem_b
 end
