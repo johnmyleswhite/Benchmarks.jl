@@ -1,5 +1,5 @@
-# An Environment object stores information about the environment in which
-# a suite of benchmarks were executed.
+# An `Environment` object stores information about the environment in which a
+# suite of benchmarks were executed.
 #
 # Fields:
 #
@@ -82,83 +82,88 @@ end
 #
 # Arguments:
 #
-#     io::IO: An IO object to be written to.
+#     io::IO: An `IO` object to be written to.
 #
-#     e::Environment: The environment that we want to print to `io`.
+#     e::Environment: The `Environment` object that we want to print to `io`.
 
 function Base.show(io::IO, e::Environment)
+    names = UTF8String[
+        "UUID",
+        "Time",
+        "Julia SHA1",
+        "Package SHA1",
+        "Machine kind",
+        "CPU architecture",
+        "CPU cores",
+        "OS",
+        "Word size",
+        "64-bit BLAS",
+    ]
+    values = Any[
+        e.uuid,
+        e.timestamp,
+        e.julia_sha1,
+        get(e.package_sha1, "NULL"),
+        e.machine,
+        e.arch,
+        e.cpu_cores,
+        e.os,
+        e.word_size,
+        e.use_blas64,
+    ]
+
     @printf(io, "================== Benchmark Environment ==================\n")
-    @printf(io, " %s %s\n", lpad("UUID:", 17), e.uuid)
-    @printf(io, " %s %s\n", lpad("Time:", 17), e.timestamp)
-    @printf(io, " %s %s\n", lpad("Julia SHA1:", 17), e.julia_sha1)
-    @printf(
-        io,
-        " %s %s\n",
-        lpad("Package SHA1:", 17),
-        get(e.package_sha1, "NULL")
-    )
-    @printf(io, " %s %s\n", lpad("Machine kind:", 17), e.machine)
-    @printf(io, " %s %s\n", lpad("CPU architecture:", 17), e.arch)
-    @printf(io, " %s %s\n", lpad("CPU cores:", 17), e.cpu_cores)
-    @printf(io, " %s %s\n", lpad("OS:", 17), e.os)
-    @printf(io, " %s %s\n", lpad("Word size:", 17), e.word_size)
-    @printf(io, " %s %s", lpad("64-bit BLAS:", 17), e.use_blas64)
+    max_length = maximum([length(n) for n in names]) +  1
+    for (n, v) in zip(names, values)
+        @printf(io, "%s: %s\n", lpad(n, max_length), v)
+    end
 end
 
 # Log information about the environment in which benchmarks are being executed
-# to a TSV file.
+# to a CSV file.
 #
 # Arguments:
 #
 #     filename::String: The name of a file to which we'll write information
-#         the environment object, `e`.
+#         about the `Environment` object, `e`.
 #
-#     e::Environment: The environment that we want to log to disk.
+#     e::Environment: The `Environment` that we want to write to disk.
 #
-#     append::Bool: Should we write a new file or append to an existing one?
+#     append::Bool: Should we append to an existing file or create a new one?
 #         Defaults to false.
 
 function Base.writecsv(filename::String, e::Environment, append::Bool = false)
+    names = UTF8String[
+        "uuid",
+        "timestamp",
+        "julia_sha1",
+        "package_sha1",
+        "os",
+        "cpu_cores",
+        "arch",
+        "machine",
+        "use_blas64",
+        "word_size",
+    ]
+    values = Any[
+        e.uuid,
+        e.timestamp,
+        e.julia_sha1,
+        get(e.package_sha1, "NULL"),
+        e.os,
+        string(e.cpu_cores),
+        e.arch,
+        e.machine,
+        string(e.use_blas64),
+        string(e.word_size),
+    ]
+
     if append
         io = open(filename, "a")
     else
         io = open(filename, "w")
     end
-    println(
-        io,
-        join(
-            [
-                "uuid",
-                "timestamp",
-                "julia_sha1",
-                "package_sha1",
-                "os",
-                "cpu_cores",
-                "arch",
-                "machine",
-                "use_blas64",
-                "word_size",
-            ],
-            "\t"
-        )
-    )
-    println(
-        io,
-        join(
-            [
-                e.uuid,
-                e.timestamp,
-                e.julia_sha1,
-                get(e.package_sha1, "NULL"),
-                e.os,
-                string(e.cpu_cores),
-                e.arch,
-                e.machine,
-                string(e.use_blas64),
-                string(e.word_size),
-            ],
-            "\t"
-        )
-    )
+    println(io, join(names, ','))
+    println(io, join(values, ','))
     close(io)
 end

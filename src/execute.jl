@@ -133,13 +133,14 @@ function execute(
         f!(s, ols_samples, ceil(Integer, n_evals))
 
         # Perform an OLS regression to estimate the per-evaluation time.
-        a, b, r² = ols(s.n_evals, s.elapsed_times)
+        a, b, r² = ols(s.evaluations, s.elapsed_times)
 
         # Stop our search when either:
         #  (1) The OLS fit is good enough; or
         #  (2) We've exhausted our time budget.
         time_used = time() - start_time
-        if r² > τ || time_used > budget
+        min_time = 0.5
+        if (r² > τ && time_used > min_time) || time_used > budget
             finished = true
         end
 

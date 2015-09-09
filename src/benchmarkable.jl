@@ -29,7 +29,11 @@
 
 macro benchmarkable(name, setup, core, teardown)
     quote
-        function $(esc(name))(s::Samples, n_samples::Integer, n_evals::Integer)
+        function $(esc(name))(
+                s::Samples,
+                n_samples::Integer,
+                evaluations::Integer,
+            )
             # Execute the setup expression exactly once
             $(esc(setup))
 
@@ -40,7 +44,7 @@ macro benchmarkable(name, setup, core, teardown)
                 time_before = time_ns()
 
                 # Evaluate the core expression n_evals times.
-                for _ in 1:n_evals
+                for _ in 1:evaluations
                     out = $(esc(core))
                 end
 
@@ -51,13 +55,10 @@ macro benchmarkable(name, setup, core, teardown)
                 diff = Base.GC_Diff(Base.gc_num(), stats)
                 bytes = diff.allocd
                 allocs = diff.malloc + diff.realloc + diff.poolalloc + diff.bigalloc
+                gc_time = diff.total_time
 
                 # Append data for this sample to the Samples objects.
-                push!(s.n_evals, n_evals)
-                push!(s.elapsed_times, elapsed_time)
-                push!(s.bytes_allocated, bytes)
-                push!(s.gc_times, diff.total_time)
-                push!(s.num_allocations, allocs)
+                push!(s, evaluations, elapsed_time, gc_time, bytes, allocs)
             end
 
             # Execute the teardown expression exactly once
