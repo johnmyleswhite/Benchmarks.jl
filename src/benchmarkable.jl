@@ -40,7 +40,10 @@ macro benchmarkable(name, setup, core, teardown)
     # they change the benchmarking function will fail with a type assertion
     # This is to prevent benchmarking dynamic method dispatch lookup
     nonconst_types = map(s->eval(current_module(), :(typeof($s))), nonconst)
-    decls = Expr(:block, map((s,t)->:($s = $(esc(s))::$t), nonconst, nonconst_types)...)
+    # We use gensyms for the local copies of non-constant bindings to prevent
+    # clashes with other local variables within the outer benchmarking function
+    nonconst_locals = map(gensym, nonconst)
+    decls = Expr(:block, map((r,s,t)->:($r = $(esc(s))::$t), nonconst_locals, nonconst, nonconst_types)...)
     quote
         @noinline function $(inner)($(map(esc, nonconst)...))
             $(esc(core))
@@ -64,7 +67,7 @@ macro benchmarkable(name, setup, core, teardown)
 
                 # Evaluate the core expression n_evals times.
                 for _ in 1:evaluations
-                    out = $(inner)($(nonconst...))
+                    out = $(inner)($(nonconst_locals...))
                 end
 
                 # get time before comparing GC info
