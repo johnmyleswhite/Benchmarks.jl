@@ -27,8 +27,24 @@
 #     (3): n_evals::Integer: The number of times the core expression will be
 #         evaluated per sample.
 
+# recursively add non-constant symbols in module m to a list
+find_nonconsts(m, x::Any, list) = list
+find_nonconsts(m, s::Symbol, list) = isconst(m, s) ? list : push!(list, s)
+find_nonconsts(m, e::Expr, list) = (map(a->find_nonconsts(m,a,list), e.args); list)
+
 macro benchmarkable(name, setup, core, teardown)
+    inner = gensym(:inner)
+    # Go through the passed core expression and determine non-constant bindings
+    nonconst = find_nonconsts(current_module(), core, Symbol[])
+    # Determine their types as they are at macro expansion type - note that if
+    # they change the benchmarking function will fail with a type assertion
+    # This is to prevent benchmarking dynamic method dispatch lookup
+    nonconst_types = map(s->eval(current_module(), :(typeof($s))), nonconst)
+    decls = Expr(:block, map((s,t)->:($s = $(esc(s))::$t), nonconst, nonconst_types)...)
     quote
+        @noinline function $(inner)($(map(esc, nonconst)...))
+            $(esc(core))
+        end
         function $(esc(name))(
                 s::Samples,
                 n_samples::Integer,
@@ -36,6 +52,9 @@ macro benchmarkable(name, setup, core, teardown)
             )
             # Execute the setup expression exactly once
             $(esc(setup))
+
+            # Copy non-constant bindings to local variables with type assertions
+            $(decls)
 
             # Generate n_samples by evaluating the core
             for _ in 1:n_samples
@@ -45,7 +64,7 @@ macro benchmarkable(name, setup, core, teardown)
 
                 # Evaluate the core expression n_evals times.
                 for _ in 1:evaluations
-                    out = $(esc(core))
+                    out = $(inner)($(nonconst...))
                 end
 
                 # get time before comparing GC info
