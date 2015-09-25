@@ -1,5 +1,4 @@
 module Benchmarks
-    import UUID
     export @benchmark
 
     include("01_clock_resolution.jl")
