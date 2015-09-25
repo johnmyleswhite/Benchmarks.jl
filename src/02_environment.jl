@@ -39,7 +39,7 @@ immutable Environment
     word_size::Int
 
     function Environment()
-        uuid = string(UUID.v4())
+        uuid = string(Base.Random.uuid4())
         timestamp = Libc.strftime("%Y-%m-%d %H:%M:%S", round(Int, time()))
         julia_sha1 = Base.GIT_VERSION_INFO.commit
         package_sha1 = if isdir(".git")
@@ -124,7 +124,7 @@ end
 #
 # Arguments:
 #
-#     filename::String: The name of a file to which we'll write information
+#     filename::AbstractString: The name of a file to which we'll write information
 #         about the `Environment` object, `e`.
 #
 #     e::Environment: The `Environment` that we want to write to disk.
@@ -132,7 +132,7 @@ end
 #     append::Bool: Should we append to an existing file or create a new one?
 #         Defaults to false.
 
-function Base.writecsv(filename::String, e::Environment, append::Bool = false)
+function Base.writecsv(filename::AbstractString, e::Environment, append::Bool = false)
     names = UTF8String[
         "uuid",
         "timestamp",

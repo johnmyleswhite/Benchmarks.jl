@@ -151,11 +151,11 @@ immutable SummaryStatistics
 
         bytes_allocated = fld(
             s.bytes_allocated[i],
-            convert(Uint, s.evaluations[i])
+            convert(UInt, s.evaluations[i])
         )
         allocations = fld(
             s.allocations[i],
-            convert(Uint, s.evaluations[i])
+            convert(UInt, s.evaluations[i])
         )
 
         new(

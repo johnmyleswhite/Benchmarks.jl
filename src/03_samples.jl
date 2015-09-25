@@ -11,11 +11,11 @@
 #     elapsed_times::Vector{Float64}: The execution time in nanoseconds for
 #         each sample. NB: We use a `Float64` vector to avoid type conversion
 #         when calling the `linreg()` function, although the timing functions
-#         use `Uint` values to represent nanoseconds.
+#         use `UInt` values to represent nanoseconds.
 #
 #     gc_times::Vector{Float64}: The GC time in nanoseconds for each sample.
 #         NB: We use a `Float64` vector for similarity with `elapsed_times`,
-#         although the timing functions use `Uint` values to represent
+#         although the timing functions use `UInt` values to represent
 #         nanoseconds.
 #
 #     bytes_allocated::Vector{Int}: The total number of bytes allocated during
@@ -117,7 +117,7 @@ end
 #
 # Arguments:
 #
-#     filename::String: The name of a file to which we'll write information
+#     filename::AbstractString: The name of a file to which we'll write information
 #         the `Samples` object, `s`.
 #
 #     s::Samples: The set of samples that we want to log to disk.
@@ -125,7 +125,7 @@ end
 #     append::Bool: Should we overwrite the file or append to existing content?
 #         Defaults to false.
 
-function Base.writecsv(filename::String, s::Samples, append::Bool = false)
+function Base.writecsv(filename::AbstractString, s::Samples, append::Bool = false)
     if append
         io = open(filename, "a")
     else

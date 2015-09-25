@@ -8,7 +8,7 @@
 #
 # Returns:
 #
-#     min_Δt::Uint: The estimated clock resolution in nanoseconds.
+#     min_Δt::UInt: The estimated clock resolution in nanoseconds.
 #
 # TODO:
 #
@@ -16,7 +16,7 @@
 #     of `time_ns()` on that platform.
 
 function estimate_clock_resolution(n_samples::Integer = 10_000)
-    min_Δt = typemax(Uint)
+    min_Δt = typemax(UInt)
 
     for _ in 1:n_samples
         t1 = Base.time_ns()
