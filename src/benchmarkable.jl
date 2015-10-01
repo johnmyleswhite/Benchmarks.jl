@@ -30,7 +30,11 @@
 # recursively add non-constant symbols in module m to a list
 find_nonconsts(m, x::Any, list) = list
 find_nonconsts(m, s::Symbol, list) = isconst(m, s) ? list : push!(list, s)
-find_nonconsts(m, e::Expr, list) = (map(a->find_nonconsts(m,a,list), e.args); list)
+function find_nonconsts(m, e::Expr, list)
+    e.head == :line && return # skip line nodes
+    map(a->find_nonconsts(m,a,list), e.args)
+    list
+end
 
 macro benchmarkable(name, setup, core, teardown)
     inner = gensym(:inner)
