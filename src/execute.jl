@@ -26,7 +26,7 @@
 #
 # Returns:
 #
-#      r::Results: A Results object containing information about the
+#      r::RawResults: A RawResults object containing information about the
 #         benchmark's full execution history.
 
 function execute(
@@ -52,7 +52,7 @@ function execute(
     # We stop benchmarking f! if we've already exhausted our time budget.
     time_used = time() - start_time
     if time_used > budget
-        return Results(false, false, false, s, time_used)
+        return RawResults(false, false, false, s, time_used)
     end
 
     # We determine the maximum number of samples we could record given
@@ -64,7 +64,7 @@ function execute(
     # We stop benchmarking if running f! one more time would put us over
     # our time budget.
     if max_samples < 1
-        return Results(false, false, false, s, time_used)
+        return RawResults(false, false, false, s, time_used)
     end
 
     # Having reached this point, we can afford to record at least one more
@@ -92,7 +92,7 @@ function execute(
     # only requested a single sample.
     time_used = time() - start_time
     if time_used > budget || samples == 1
-        return Results(true, false, false, s, time_used)
+        return RawResults(true, false, false, s, time_used)
     end
 
     # Now we determine if the function is so fast that we need to execute the
@@ -105,7 +105,7 @@ function execute(
         max_samples = floor(Integer, remaining_time_ns / debiased_time_ns)
         n_samples = min(max_samples, samples - 1)
         f!(s, n_samples, 1)
-        return Results(true, true, false, s, time() - start_time)
+        return RawResults(true, true, false, s, time() - start_time)
     end
 
     # If we've reached this far, we are benchmarking a function that is so fast
@@ -160,5 +160,5 @@ function execute(
         n_evals *= α
     end
 
-    return Results(true, true, true, s, time() - start_time)
+    return RawResults(true, true, true, s, time() - start_time)
 end

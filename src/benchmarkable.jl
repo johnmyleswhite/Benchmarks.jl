@@ -84,7 +84,7 @@ macro benchmarkable(name, setup, core, teardown)
             # Execute the teardown expression exactly once
             $(esc(teardown))
 
-            # The caller receives all data via the mutated Results object.
+            # The caller receives all data via the mutated RawResults object.
             return
         end
     end

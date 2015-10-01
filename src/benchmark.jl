@@ -25,7 +25,7 @@ macro benchmark(core)
                 $(esc(core)),
                 nothing
             )
-            Benchmarks.execute($name)
+            Benchmarks.BenchmarkResults(Benchmarks.execute($name))
         end
     end
 end

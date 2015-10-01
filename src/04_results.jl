@@ -1,5 +1,5 @@
-# A `Results` object stores information about the results of benchmarking an
-# expression.
+# A `RawResults` object stores information gained via benchmark execution,
+# before any statistical analysis has occurred.
 #
 # Fields:
 #
@@ -31,7 +31,7 @@
 #     time_used::Float64: The time (in nanoseconds) that was consumed by the
 #         benchmarking process.
 
-immutable Results
+immutable RawResults
     precompiled::Bool
     multiple_samples::Bool
     search_performed::Bool
@@ -40,8 +40,8 @@ immutable Results
 end
 
 # A `SummaryStatistics` object stores the results of a statistic analysis of
-# a `Results` object. The precise analysis strategy employed depends on the
-# structure of the `Results` object:
+# a `RawResults` object. The precise analysis strategy employed depends on the
+# structure of the `RawResults` object:
 #
 #     (1) If only a single sample of a single evaluation was recorded, the
 #     analysis reports only point estimates.
@@ -82,7 +82,7 @@ immutable SummaryStatistics
     allocations::Int
     r²::Nullable{Float64}
 
-    function SummaryStatistics(r::Results)
+    function SummaryStatistics(r::RawResults)
         s = r.samples
         n = length(s.evaluations)
         n_evaluations = convert(Int, sum(s.evaluations))
@@ -172,138 +172,4 @@ immutable SummaryStatistics
             r²,
         )
     end
-end
-
-function pretty_time_string(t)
-    if t < 1_000.0
-        @sprintf("%.2f ns", t)
-    elseif t < 1_000_000.0
-        @sprintf("%.2f μs", t / 1_000.0)
-    elseif t < 1_000_000_000.0
-        @sprintf("%.2f ms", t / 1_000_000.0)
-    else # if t < 1_000_000_000_000.0
-        @sprintf("%.2f s", t / 1_000_000_000.0)
-    end
-end
-
-function pretty_memory_string(b)
-    if b < 1_024.0
-        @sprintf("%.2f bytes", b)
-    elseif b < 1_024.0^2
-        @sprintf("%.2f kb", b / 1_024.0)
-    elseif b < 1_024.0^3
-        @sprintf("%.2f mb", b / 1_024.0^2)
-    else # if b < 1_024.0^4
-        @sprintf("%.2f gb", b / 1_024.0^3)
-    end
-end
-
-# Pretty-print information about the results of benchmarking an expression.
-#
-# Arguments:
-#
-#     io::IO: An `IO` object to be written to.
-#
-#     r::Results: The `Results` object that we want to print to `io`.
-#
-
-function Base.show(io::IO, r::Results)
-    stats = SummaryStatistics(r)
-
-    max_length = 24
-    @printf(io, "================ Benchmark Results ========================\n")
-
-    if !r.precompiled
-        @printf(io, "Warning: function may not have been precompiled\n")
-    end
-    if isnull(stats.elapsed_time_lower) || isnull(stats.elapsed_time_upper)
-        @printf(
-            io,
-            "%s: %s\n",
-            lpad("Time per evaluation", max_length),
-            pretty_time_string(stats.elapsed_time_center),
-        )
-    else
-        @printf(
-            io,
-            "%s: %s [%s, %s]\n",
-            lpad("Time per evaluation", max_length),
-            pretty_time_string(stats.elapsed_time_center),
-            pretty_time_string(get(stats.elapsed_time_lower)),
-            pretty_time_string(get(stats.elapsed_time_upper)),
-        )
-    end
-    if isnull(stats.elapsed_time_lower) || isnull(stats.elapsed_time_upper)
-        @printf(
-            io,
-            "%s: %.2f%%\n",
-            lpad("Proportion of time in GC", max_length),
-            stats.gc_proportion_center
-        )
-    else
-        @printf(
-            io,
-            "%s: %.2f%% [%.2f%%, %.2f%%]\n",
-            lpad("Proportion of time in GC", max_length),
-            stats.gc_proportion_center,
-            get(stats.gc_proportion_lower),
-            get(stats.gc_proportion_upper),
-        )
-    end
-    @printf(
-        io,
-        "%s: %s\n",
-        lpad("Memory allocated", max_length),
-        pretty_memory_string(stats.bytes_allocated),
-    )
-    @printf(
-        io,
-        "%s: %d allocations\n",
-        lpad("Number of allocations", max_length),
-        stats.allocations,
-    )
-    @printf(
-        io,
-        "%s: %d\n",
-        lpad("Number of samples", max_length),
-        stats.n
-    )
-    @printf(
-        io,
-        "%s: %d\n",
-        lpad("Number of evaluations", max_length),
-        stats.n_evaluations
-    )
-    if r.search_performed
-        @printf(
-            io,
-            "%s: %.3f\n",
-            lpad("R² of OLS model", max_length),
-            get(stats.r², NaN),
-        )
-    end
-    @printf(
-        io,
-        "%s: %.2f s\n",
-        lpad("Time spent benchmarking", max_length),
-        r.time_used,
-    )
-    # @printf(
-    #     io,
-    #     "%s: %s\n",
-    #     lpad("Precompiled", max_length),
-    #     string(r.precompiled)
-    # )
-    # @printf(
-    #     io,
-    #     "%s: %s\n",
-    #     lpad("Multiple samples", max_length),
-    #     string(r.multiple_samples),
-    # )
-    # @printf(
-    #     io,
-    #     "%s: %s",
-    #     lpad("Search performed", max_length),
-    #     string(r.search_performed),
-    # )
 end
