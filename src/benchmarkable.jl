@@ -30,24 +30,25 @@
 # recursively add non-constant symbols in module m to a list
 find_nonconsts(m, x::Any, list) = list
 find_nonconsts(m, s::Symbol, list) = isconst(m, s) ? list : push!(list, s)
-find_nonconsts(m, e::Expr, list) = (map(a->find_nonconsts(m,a,list), e.args); list)
+function find_nonconsts(m, e::Expr, list)
+    e.head == :line && return # skip line nodes
+    map(a->find_nonconsts(m,a,list), e.args)
+    list
+end
 
 macro benchmarkable(name, setup, core, teardown)
     inner = gensym(:inner)
     # Go through the passed core expression and determine non-constant bindings
     nonconst = unique(find_nonconsts(current_module(), core, Symbol[]))
-    # Determine their types as they are at macro expansion type - note that if
-    # they change the benchmarking function will fail with a type assertion
-    # This is to prevent benchmarking dynamic method dispatch lookup
-    nonconst_types = map(s->eval(current_module(), :(typeof($s))), nonconst)
-    # We use gensyms for the local copies of non-constant bindings to prevent
-    # clashes with other local variables within the outer benchmarking function
+    # We assign these non-const bindings to a local constant binding
+    # in order to ensure we aren't timing untyped dispatch lookup
     nonconst_locals = map(gensym, nonconst)
-    decls = Expr(:block, map((r,s,t)->:($r = $(esc(s))::$t), nonconst_locals, nonconst, nonconst_types)...)
+    decls = Expr(:block, map((r,s)->:(const $r = $(esc(s))), nonconst_locals, nonconst)...)
     quote
         @noinline function $(inner)($(map(esc, nonconst)...))
             $(esc(core))
         end
+        $decls
         function $(esc(name))(
                 s::Samples,
                 n_samples::Integer,
@@ -55,9 +56,6 @@ macro benchmarkable(name, setup, core, teardown)
             )
             # Execute the setup expression exactly once
             $(esc(setup))
-
-            # Copy non-constant bindings to local variables with type assertions
-            $(decls)
 
             # Generate n_samples by evaluating the core
             for _ in 1:n_samples
