@@ -35,7 +35,7 @@ find_nonconsts(m, e::Expr, list) = (map(a->find_nonconsts(m,a,list), e.args); li
 macro benchmarkable(name, setup, core, teardown)
     inner = gensym(:inner)
     # Go through the passed core expression and determine non-constant bindings
-    nonconst = find_nonconsts(current_module(), core, Symbol[])
+    nonconst = unique(find_nonconsts(current_module(), core, Symbol[]))
     # Determine their types as they are at macro expansion type - note that if
     # they change the benchmarking function will fail with a type assertion
     # This is to prevent benchmarking dynamic method dispatch lookup
