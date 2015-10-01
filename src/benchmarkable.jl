@@ -27,32 +27,56 @@
 #     (3): n_evals::Integer: The number of times the core expression will be
 #         evaluated per sample.
 
-# recursively add non-constant symbols in module m to a list
-find_nonconsts(m, x::Any, list) = list
-find_nonconsts(m, s::Symbol, list) = isconst(m, s) ? list : push!(list, s)
-function find_nonconsts(m, e::Expr, list)
-    e.head == :line && return # skip line nodes
-    map(a->find_nonconsts(m,a,list), e.args)
-    list
-end
-
 macro benchmarkable(name, setup, core, teardown)
-    inner = gensym(:inner)
-    # Go through the passed core expression and determine non-constant bindings
-    nonconst = unique(find_nonconsts(current_module(), core, Symbol[]))
-    # We assign these non-const bindings to a local constant binding
-    # in order to ensure we aren't timing untyped dispatch lookup
-    nonconst_locals = map(gensym, nonconst)
-    decls = Expr(:block, map((r,s)->:(const $r = $(esc(s))), nonconst_locals, nonconst)...)
+    # expand the passed expression to support `x[1]` and macros
+    expr = expand(core)
+    # only support function calls
+    expr.head == :call || throw(ArgumentError("expression to benchmark must be a function call"))
+    f = expr.args[1]
+    nargs = length(expr.args) - 1
+    args = Symbol[gensym("arg_$i") for i in 1:nargs]
+
+    benchfn = gensym("bench")
+    innerfn = gensym("inner")
+
+    # Strategy: we create *three* functions:
+    # * The outermost function is the entry point. It's simply a closure around
+    #   the expressions the user passed in `core` as the arguments to the
+    #   benchmarked function. This allows the arguments to be considered setup,
+    #   which are evaluated in the correct scope. However, that means that
+    #   within this outermost function, the arguments probably aren't
+    #   concretely typed. This means that if we were to run the benchmarking
+    #   function in this outermost function, we'd end up benchmarking dynamic
+    #   dispatch most of the time.  So we introduce a function barrier here.
+    # * The second level (`benchfn`) is the benchmarking loop.  Here is where
+    #   the real work gets done.  However, if we were to call the benchmarked
+    #   function directly here, it might get inlined.  And if it gets inlined,
+    #   then LLVM can use optimizations that interact with the test loop itself.
+    #   No longer are we simply testing the benchmarked function; we are testing
+    #   the benchmark loops.  So in order to circumvent this, we introduce a
+    #   third function that is explicitly marked `@noinline`
+    # * It is within this third, `inner` function that we call the user's
+    #   function that they want to benchmark. This means that all timings will
+    #   include the overhead of at least one function call. But it also means
+    #   that we can prevent LLVM from doing optimizations that are related to
+    #   the benchmarking itself: it must always call the inner function in the
+    #   benchmarking function (since at the mid-level it doesn't know what that
+    #   function might do), and within the inner function it can only eliminate
+    #   code that's unrelated to the return value (since it doesn't know what
+    #   the caller might do).
     quote
-        @noinline function $(inner)($(map(esc, nonconst)...))
-            $(esc(core))
-        end
-        $decls
         function $(esc(name))(
                 s::Samples,
                 n_samples::Integer,
                 evaluations::Integer,
+            )
+            $(benchfn)(s, n_samples, evaluations, $(map(esc, expr.args[2:end])...))
+        end
+        function $(benchfn)(
+                s::Samples,
+                n_samples::Integer,
+                evaluations::Integer,
+                $(args...)
             )
             # Execute the setup expression exactly once
             $(esc(setup))
@@ -65,7 +89,7 @@ macro benchmarkable(name, setup, core, teardown)
 
                 # Evaluate the core expression n_evals times.
                 for _ in 1:evaluations
-                    out = $(inner)($(nonconst_locals...))
+                    out = $(innerfn)($(args...))
                 end
 
                 # get time before comparing GC info
@@ -87,5 +111,11 @@ macro benchmarkable(name, setup, core, teardown)
             # The caller receives all data via the mutated Results object.
             return
         end
+        @noinline function $(innerfn)($(map(esc, args)...))
+            $(esc(f))($(map(esc, args)...))
+        end
+
+        # "return" the outermost entry point as the final expression
+        $(esc(name))
     end
 end
