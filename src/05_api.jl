@@ -1,6 +1,6 @@
 # A `BenchmarkResults` object stores both the `RawResults` from benchmark
 # execution and the `SummaryStatistics` computed from these `RawResults`. The
-# main purpose of the `BenchmarkResults` type serves as a vessel for the API.
+# purpose of the `BenchmarkResults` type is to serve as a vessel for the API.
 #
 # Fields:
 #
