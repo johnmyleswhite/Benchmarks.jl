@@ -42,18 +42,10 @@ immutable Environment
         uuid = string(Base.Random.uuid4())
         timestamp = Libc.strftime("%Y-%m-%d %H:%M:%S", round(Int, time()))
         julia_sha1 = Base.GIT_VERSION_INFO.commit
-        package_sha1 = if isdir(".git")
-            sha1 = ""
-            try
-                sha1 = readchomp(`git rev-parse HEAD`)
-            end
-            if isempty(sha1)
-                Nullable{UTF8String}()
-            else
-                Nullable{UTF8String}(utf8(sha1))
-            end
-        else
-            Nullable{UTF8String}()
+        package_sha1 = Nullable{UTF8String}()
+        try
+            sha1 = readchomp(pipeline(`git rev-parse HEAD`, stderr=Base.DevNull))
+            package_sha1 = Nullable{UTF8String}(utf8(sha1))
         end
         os = string(OS_NAME)
         cpu_cores = CPU_CORES
