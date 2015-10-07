@@ -107,7 +107,7 @@ immutable SummaryStatistics
                 gc_proportion_sem = std(s.gc_times ./ s.elapsed_times) / sqrt(n)
                 r² = Nullable{Float64}()
                 elapsed_time_center = m
-                elapsed_time_lower = m - 6.0 * sem
+                elapsed_time_lower = max(0.0, m - 6.0 * sem)
                 elapsed_time_upper = m + 6.0 * sem
                 gc_proportion_center = 100.0 * gc_proportion
                 gc_proportion_lower = Nullable{Float64}(
@@ -130,7 +130,7 @@ immutable SummaryStatistics
             gc_proportion_sem = std(s.gc_times ./ s.elapsed_times) / sqrt(n)
             r² = Nullable{Float64}(ols_r²)
             elapsed_time_center = b
-            elapsed_time_lower = b - 6.0 * sem
+            elapsed_time_lower = max(0.0, b - 6.0 * sem)
             elapsed_time_upper = b + 6.0 * sem
             gc_proportion_center = 100.0 * gc_proportion
             gc_proportion_lower = Nullable{Float64}(
