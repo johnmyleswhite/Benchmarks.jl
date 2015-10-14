@@ -28,13 +28,27 @@
 #         evaluated per sample.
 
 macro benchmarkable(name, setup, core, teardown)
-    # expand the passed expression to support `x[1]` and macros
-    expr = expand(core)
+    expr = core
     # only support function calls
     expr.head == :call || throw(ArgumentError("expression to benchmark must be a function call"))
     f = expr.args[1]
-    nargs = length(expr.args) - 1
-    args = Symbol[gensym("arg_$i") for i in 1:nargs]
+    fargs = expr.args[2:end]
+    nargs = length(expr.args)-1
+
+    # Pull out the arguments -- both positional and keywords
+    userargs = Any[]  # The actual expressions the user wrote
+    args = Symbol[gensym("arg_$i") for i in 1:nargs] # The local argument names
+    posargs = Symbol[] # The names that are positional arguments
+    kws = Expr[]       # Names that are used in keyword arguments
+    for i in 1:nargs
+        if isa(fargs[i], Expr) && fargs[i].head == :kw
+            push!(kws, Expr(:kw, fargs[i].args[1], args[i]))
+            push!(userargs, fargs[i].args[2])
+        else
+            push!(posargs, args[i])
+            push!(userargs, fargs[i])
+        end
+    end
 
     benchfn = gensym("bench")
     innerfn = gensym("inner")
@@ -70,7 +84,7 @@ macro benchmarkable(name, setup, core, teardown)
                 n_samples::Integer,
                 evaluations::Integer,
             )
-            $(benchfn)(s, n_samples, evaluations, $(map(esc, expr.args[2:end])...))
+            $(benchfn)(s, n_samples, evaluations, $(map(esc, userargs)...))
         end
         function $(benchfn)(
                 s::Samples,
@@ -112,7 +126,7 @@ macro benchmarkable(name, setup, core, teardown)
             return
         end
         @noinline function $(innerfn)($(map(esc, args)...))
-            $(esc(f))($(map(esc, args)...))
+            $(esc(f))($(map(esc, posargs)...), $(map(esc, kws)...))
         end
 
         # "return" the outermost entry point as the final expression
