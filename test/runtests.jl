@@ -6,6 +6,7 @@ my_tests = [
     "01_clock_resolution.jl",
     "02_environment.jl",
     "03_samples.jl",
+    "04_api.jl",
 ]
 
 println("Running tests:")
