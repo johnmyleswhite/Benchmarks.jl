@@ -28,8 +28,13 @@
 #         evaluated per sample.
 
 macro benchmarkable(name, setup, core, teardown)
-    expr = core
-    # only support function calls
+    # We only support function calls to be passed in `core`, but some syntaxes
+    # have special parsing that will lower to a function call upon expansion
+    # (e.g., A[i] or user macros). The tricky thing is that keyword functions
+    # *also* have a special lowering step that we don't want (they are harder to
+    # work with and would obscure some of the overhead of keyword arguments). So
+    # we only expand the passed expression if it is not already a function call.
+    expr = (core.head == :call) ? core : expand(core)
     expr.head == :call || throw(ArgumentError("expression to benchmark must be a function call"))
     f = expr.args[1]
     fargs = expr.args[2:end]
