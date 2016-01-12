@@ -89,6 +89,7 @@ macro benchmarkable(name, setup, core, teardown)
                 n_samples::Integer,
                 evaluations::Integer,
             )
+            gc()
             $(benchfn)(s, n_samples, evaluations, $(map(esc, userargs)...))
         end
         function $(benchfn)(
