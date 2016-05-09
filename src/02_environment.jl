@@ -3,38 +3,38 @@
 #
 # Fields:
 #
-#     uuid::UTF8String: A random UUID that uniquely identifies each run.
+#     uuid::String: A random UUID that uniquely identifies each run.
 #
-#     timestamp::UTF8String: The time when we began executing benchmarks.
+#     timestamp::String: The time when we began executing benchmarks.
 #
-#     julia_sha1::UTF8String: The SHA1 for the Julia Git revision we're working
+#     julia_sha1::String: The SHA1 for the Julia Git revision we're working
 #         from.
 #
-#     package_sha1::Nullable{UTF8String}: The SHA1 for the current repo's Git
+#     package_sha1::Nullable{String}: The SHA1 for the current repo's Git
 #         revision (if any). This field is null when the code was not executed
 #         inside of a Git repo.
 #
-#     os::UTF8String: The OS we're running on.
+#     os::String: The OS we're running on.
 #
 #     cpu_cores::Int: The number of CPU cores available.
 #
-#     arch::UTF8String: The architecture we're running on.
+#     arch::String: The architecture we're running on.
 #
-#     machine::UTF8String: The machine type we're running on.
+#     machine::String: The machine type we're running on.
 #
 #     use_blas64::Bool: Was BLAS configured to use 64-bits?
 #
 #     word_size::Int: The word size of the host machine.
 
 immutable Environment
-    uuid::UTF8String
-    timestamp::UTF8String
-    julia_sha1::UTF8String
-    package_sha1::Nullable{UTF8String}
-    os::UTF8String
+    uuid::Compat.String
+    timestamp::Compat.String
+    julia_sha1::Compat.String
+    package_sha1::Nullable{Compat.String}
+    os::Compat.String
     cpu_cores::Int
-    arch::UTF8String
-    machine::UTF8String
+    arch::Compat.String
+    machine::Compat.String
     use_blas64::Bool
     word_size::Int
 
@@ -42,10 +42,10 @@ immutable Environment
         uuid = string(Base.Random.uuid4())
         timestamp = Libc.strftime("%Y-%m-%d %H:%M:%S", round(Int, time()))
         julia_sha1 = Base.GIT_VERSION_INFO.commit
-        package_sha1 = Nullable{UTF8String}()
+        package_sha1 = Nullable{Compat.String}()
         try
             sha1 = readchomp(pipeline(`git rev-parse HEAD`, stderr=Base.DevNull))
-            package_sha1 = Nullable{UTF8String}(utf8(sha1))
+            package_sha1 = Nullable{Compat.String}(utf8(sha1))
         end
         os = string(OS_NAME)
         cpu_cores = CPU_CORES
@@ -79,7 +79,7 @@ end
 #     e::Environment: The `Environment` object that we want to print to `io`.
 
 function Base.show(io::IO, e::Environment)
-    names = UTF8String[
+    names = Compat.String[
         "UUID",
         "Time",
         "Julia SHA1",
@@ -125,7 +125,7 @@ end
 #         Defaults to false.
 
 function Base.writecsv(filename::AbstractString, e::Environment, append::Bool = false)
-    names = UTF8String[
+    names = Compat.String[
         "uuid",
         "timestamp",
         "julia_sha1",

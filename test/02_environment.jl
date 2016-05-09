@@ -1,6 +1,7 @@
 module TestEnvironment
     import Benchmarks
     using Base.Test
+    using Compat
 
     e = Benchmarks.Environment()
 
@@ -9,6 +10,6 @@ module TestEnvironment
 
     path = tempname()
     writecsv(path, e)
-    bytes = readall(path)
+    bytes = readstring(path)
     rm(path)
 end

@@ -109,7 +109,7 @@ macro benchmarkable(name, setup, core, teardown)
 
                 # Evaluate the core expression n_evals times.
                 for _ in 1:evaluations
-                    out = $(innerfn)($(args...))
+                    out = $(esc(innerfn))($(args...))
                 end
 
                 # get time before comparing GC info
@@ -131,9 +131,9 @@ macro benchmarkable(name, setup, core, teardown)
             # The caller receives all data via the mutated Results object.
             return
         end
-        @noinline function $(innerfn)($(map(esc, args)...))
-            $(esc(f))($(map(esc, posargs)...), $(map(esc, kws)...))
-        end
+        $(esc(:(@noinline function $innerfn($(args...))
+            $f($(posargs...), $(kws...))
+        end)))
 
         # "return" the outermost entry point as the final expression
         $(esc(name))

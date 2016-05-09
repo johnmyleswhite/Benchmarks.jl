@@ -103,7 +103,7 @@ end
 #     s::Samples: The `Samples` object that we want to print to `io`.
 
 function Base.show(io::IO, s::Samples)
-    names = UTF8String["Number of samples"]
+    names = Compat.String["Number of samples"]
     values = Any[length(s.elapsed_times)]
 
     @printf(io, "================== Benchmark Samples ======================\n")

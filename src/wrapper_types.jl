@@ -3,12 +3,12 @@
 #
 # Fields:
 #
-#    name::UTF8String: The name of the benchmark.
+#    name::String: The name of the benchmark.
 #
 #    f!::Function: A function that implements the "benchmarkable" protocol.
 
 immutable Benchmark
-    name::UTF8String
+    name::Compat.String
     f!::Function
 end
 
@@ -16,11 +16,11 @@ end
 #
 # Fields:
 #
-#     name::UTF8String: The name of the suite of benchmarks.
+#     name::String: The name of the suite of benchmarks.
 #
 #     benchmarks::Vector{Benchmark}: A vector of the benchmarks in the suite.
 
 immutable BenchmarkSuite
-    name::UTF8String
+    name::Compat.String
     benchmarks::Vector{Benchmark}
 end

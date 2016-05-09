@@ -1,4 +1,7 @@
 module Benchmarks
+
+    using Compat
+
     export @benchmark
 
     include("01_clock_resolution.jl")
