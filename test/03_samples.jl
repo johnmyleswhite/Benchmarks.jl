@@ -1,6 +1,7 @@
 module TestSamples
     import Benchmarks
     using Base.Test
+    using Compat
 
     s = Benchmarks.Samples()
 
@@ -11,7 +12,7 @@ module TestSamples
 
     path = tempname()
     writecsv(path, s)
-    bytes = readall(path)
+    bytes = readstring(path)
     rm(path)
 
     empty!(s)
