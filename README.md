@@ -1,3 +1,5 @@
+** NOTE: THIS PACKAGE IS DEPRECATED. PLEASE SWITCH OVER TO USING THE BenchmarkTools.jl PACKAGE **
+
 Benchmarks.jl
 =============
 
