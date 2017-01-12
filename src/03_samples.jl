@@ -33,11 +33,11 @@ immutable Samples
 
     function Samples()
         new(
-            Array(Float64, 0),
-            Array(Float64, 0),
-            Array(Float64, 0),
-            Array(Int, 0),
-            Array(Int, 0),
+            Vector{Float64}(0),
+            Vector{Float64}(0),
+            Vector{Float64}(0),
+            Vector{Int}(0),
+            Vector{Int}(0),
         )
     end
 end

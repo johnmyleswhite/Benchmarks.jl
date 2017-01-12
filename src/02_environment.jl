@@ -45,14 +45,14 @@ immutable Environment
         package_sha1 = Nullable{Compat.String}()
         try
             sha1 = readchomp(pipeline(`git rev-parse HEAD`, stderr=Base.DevNull))
-            package_sha1 = Nullable{Compat.String}(utf8(sha1))
+            package_sha1 = Nullable{Compat.String}(Compat.String(sha1))
         end
-        os = string(OS_NAME)
-        cpu_cores = CPU_CORES
-        arch = string(Base.ARCH)
+        os = string(Compat.KERNEL === :NT ? :Windows : Compat.KERNEL)
+        cpu_cores = Sys.CPU_CORES
+        arch = string(Sys.ARCH)
         machine = Base.MACHINE
         use_blas64 = Base.USE_BLAS64
-        word_size = Base.WORD_SIZE
+        word_size = Sys.WORD_SIZE
 
         new(
             uuid,
