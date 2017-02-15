@@ -37,7 +37,7 @@ macro benchmarkable(name, setup, core, teardown)
     expr = (core.head == :call) ? core : expand(core)
     expr.head == :call || throw(ArgumentError("expression to benchmark must be a function call"))
     f = expr.args[1]
-    fargs = expr.args[2:end]
+    fargs = flatten_parameters(expr.args[2:end])
     nargs = length(expr.args)-1
 
     # Pull out the arguments -- both positional and keywords
@@ -138,4 +138,16 @@ macro benchmarkable(name, setup, core, teardown)
         # "return" the outermost entry point as the final expression
         $(esc(name))
     end
+end
+
+# take a list of arguments and return the list with any parameter kwargs
+# extracted and appended to the rest of the original arguments
+function flatten_parameters(fargs)
+    if !(isempty(fargs))
+        arg1 = first(fargs)
+        if isa(arg1, Expr) && arg1.head == :parameters
+            return [drop(fargs, 1)..., arg1.args...]
+        end
+    end
+    return fargs
 end
